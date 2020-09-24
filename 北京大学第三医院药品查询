@@ -1,0 +1,144 @@
+{$I 输入模板.run}
+北京大学第三医院网站自助查询综合平台(网址,页数)
+
+{$I 帮助信息.run}
+
+{$I 参数定义.run}            
+网址:字符串
+页数:字符串
+{$I 返回定义.run}
+返回:字符串
+{$I 函数主体.run}
+
+窗口标题 = '北京大学第三医院网站自助查询综合平台'
+
+//关闭已打开的干扰窗口
+for i = 0 to 100
+[
+  窗口 = 获取IE浏览器窗口(窗口标题)
+  if (窗口 > 0)
+  [
+    关闭Html窗口(窗口)
+    sleep(1000) 
+  ] else
+  [
+    break
+  ]
+]
+
+//创建EXCEL文件
+文件  = 'D:\krpa\test.xlsx' 
+try
+  xls = 创建Xlsx()
+  写Xlsx(xls, 0, 0, 0, '药品拼音码')
+  写Xlsx(xls, 0, 1, 0, '药品名称')
+  写Xlsx(xls, 0, 2, 0, '药品规格')
+  写Xlsx(xls, 0, 3, 0, '药品价格')
+  写Xlsx(xls, 0, 4, 0, '药品种类')
+  写Xlsx(xls, 0, 5, 0, '通用名查看')
+  写Xlsx(xls, 0, 6, 0, '生产企业')
+  保存Xlsx(xls, 文件)   
+finally
+  关闭Xlsx(xls)
+end
+
+if (not 文件存在(文件))
+[
+  返回 = 设置指标('严重', '创建EXCEL失败', '')
+  Trace(返回)
+  Exit
+]
+
+窗口标题 = '北京大学第三医院网站自助查询综合平台'
+
+//打开网页 
+运行程序('iexplore.exe', 网址, '', 最大化)
+窗口 = 等待IE浏览器窗口(窗口标题, 60)
+if (窗口 = 0)
+[
+  返回 = 设置指标('严重', '等待不到网页：自助查询综合平台', '')
+  Trace(返回)
+  Exit    
+]
+等待网页加载完成(窗口, 10)
+元素 = 等待IE元素(窗口, 'RegEx=False;tag=div;innerText=药品查询:;', 0, 10)
+if (元素 = nil)
+[
+  返回 = 设置指标('严重', '等待不到药品查询界面', '')
+  Trace(返回)
+  Exit    
+]
+激活窗口(窗口)
+
+//爬取药品数据
+for pages = 0 to StrToInt(页数)-1
+[ 
+  for row = 0 to 9
+  [
+    now_row = pages * 10 + row + 1
+    try
+      xls = 打开Xlsx(文件)
+      元素tbody = 等待ie元素(窗口, 'tag=tbody;id=list', 0, 60)      
+      if (元素tbody = nil)
+      [
+        返回 = 设置指标('严重', '元素tbody不存在', '')
+        Trace(返回)
+        Exit    
+      ]
+      元素tr = 获取元素子节点(元素tbody,'tr',row) 
+      数量 = 获取元素子节点数量(元素tr)
+      for column = 0 to 数量 - 1
+      [
+        元素td = 获取元素子节点(元素tr,'td',column)
+        内容 =获取元素文本(元素td)
+        trace(内容)
+        写xlsx(xls, now_row , column , 0, 内容)      
+      ]
+    保存Xlsx(xls, 文件)
+    finally  
+    关闭Xlsx(xls)
+    end    
+    日志('testtesttest')       
+  ]
+                                
+  //点击下一页
+  if (pages = StrToInt(页数)-1)
+  [
+    break
+  ]
+  元素div = 等待ie元素(窗口, 'tag=div;class=sabrosus', 0, 20)
+  if (元素div = nil)
+  [
+    日志('元素div不存在')
+    返回 = 设置指标('严重', '元素div不存在', '')
+    Trace(返回)
+    exit
+  ]
+  数量 = 获取元素子节点数量(元素div)
+  元素next = 获取元素子节点(元素div,'a',数量 - 1)
+  if (元素next = nil)
+  [
+    日志('元素next不存在')
+    返回 = 设置指标('严重', '元素next不存在', '')
+    Trace(返回)
+    exit
+  ]
+  点击元素(元素next,60)
+  url= 获取元素属性(元素next, 'href')
+  trace(url)
+  窗口 = 等待IE浏览器窗口2('https://zhcx.puh3.net.cn:8081/index.php/seek/drug/p/' + IntToStr(pages+2) + '.html', 60)
+  if (窗口 = 0)
+  [
+    返回 = 设置指标('严重', '窗口不存在', '')
+    Trace(返回)
+    exit
+  ]
+]
+
+关闭Html窗口(窗口)
+
+返回 = 设置指标('正常', 'True', '描述')
+Trace(返回)
+{$I 调试开始.run}
+调用组件('https://zhcx.puh3.net.cn:8081/index.php/seek/drug/p/1.html','2')
+{$I 调试结束.run}
