@@ -1,0 +1,113 @@
+{$I 输入模板.run}
+谷歌数据爬取（林盼）()
+
+{$I 帮助信息.run}
+
+{$I 参数定义.run}
+参数:字符串
+{$I 返回定义.run}
+返回:字符串
+{$I 函数主体.run}
+
+se启动Chrome驱动() 
+seNewSession(sSessionID) 
+信息 = seGoToUrl(sSessionID, 'https://zhcx.puh3.net.cn:8081/index.php/seek/drug/p/1.html')
+sleep(1000)
+
+//下一页
+while True
+[	
+	//获取行数
+	lstElements_row =创建字符串列表()
+	信息 = seFindElementsByXPath(sSessionID, '//*[@id="list"]/tr', lstElements_row)
+	trace('行数')
+	trace(inttostr(lstElements_row.count)) //返回子元素的ID列表
+	for i = 0 to lstElements_row.count - 1
+	//for i = 0 to 3
+	[
+	  //获取列数
+	  lstElements_tds =创建字符串列表()
+	  xpath1 = '//*[@id="list"]/tr['+inttostr(i + 1)+']/td' 
+	  信息 = seFindElementsByXPath(sSessionID, xpath1, lstElements_tds)
+	  trace('td数量')
+	  trace(inttostr(lstElements_tds.count)) //返回子元素的ID列表
+	  //获取药品拼音码 药品名称。。。
+	  错误信息 = Com创建EXCEL对象(ExcelApp)
+	  文件 = 'C:\Users\15079476691\Desktop\弘爱药品信息下载.xlsx'
+	  错误信息 = Com打开工作簿(ExcelApp, 文件, 工作簿)
+	  数量 = Com获取行数(工作簿, 1)
+	  trace(inttostr(数量))
+	  sleep(1000)
+	  for j = 0 to lstElements_tds.count -1
+	  [
+		  if (j < lstElements_tds.count -1)
+	  	[   
+		    信息 = seGetElementText(sSessionID, lstElements_tds[j], sText_td)    
+		    //trace(sText_td)
+		    Com设置单元格内容(工作簿, 数量 + 1, j + 1, 1,sText_td)
+	  	] else
+	  	[
+		    //点击查看说明书 
+		    xpath = '//*[@id="list"]/tr['+inttostr(i + 1)+']/td[7]/a'
+		    信息 = seFindElementByXPath(sSessionID, xpath, sElementID)
+		    信息 =  seClickElement(sSessionID, sElementID)
+		    //切换网页
+		    lstWindowHandles =创建字符串列表()
+		    信息 = seGetWindowHandles(sSessionID, lstWindowHandles)
+		    //trace(lstWindowHandles.text)
+		    信息 = seSwitchToWindowByName(sSessionID, lstWindowHandles[1])
+		    //trace(信息)}
+		    //获取生产企业信息  
+		    信息 = seFindElementByXPath(sSessionID, '//h3[contains(text(),"【生产企业】")]/following-sibling::div[1]', sElementID) 
+		    信息 = seGetElementText(sSessionID, sElementID, sText_com)    
+		    trace(sText_com) //返回元素属性值
+		   
+		  
+		  
+	  	  Com设置行高(工作簿, 1, 数量 + 1, 112)
+		    Com设置单元格内容(工作簿, 数量 + 1, j + 1, 1,sText_com)
+		    Com保存工作簿(工作簿, 文件)
+		    Com关闭工作簿(工作簿)
+
+		    Com关闭所有工作簿(ExcelApp)
+		    Com释放对象(ExcelApp)
+
+
+		    // 关闭药品说明书网站
+		    信息 = seClose(sSessionID)
+		    sleep(1000)
+		    //切换网页
+		    lstWindowHandles =创建字符串列表()
+		    信息 = seGetWindowHandles(sSessionID, lstWindowHandles)
+		    trace(lstWindowHandles.text)
+		    信息 = seSwitchToWindowByName(sSessionID, lstWindowHandles[0])
+		    sleep(1000)
+	  	]
+    
+    ]
+  ]		  	
+		
+	信息 = seFindElementByXPath(sSessionID, '//*[@class="sabrosus"]/a[contains(text(),"下一页")]', sElementID_next)
+  信息 = seGetElementText(sSessionID, sElementID_next, sText_next)
+  trace(sText_next)
+	if (sText_next = '下一页')
+	[
+		
+		信息 =  seClickElement(sSessionID, sElementID_next)
+		sleep(1000)
+		
+	] else
+	[
+  
+	  trace('到达最后一页')  //返回错误信息
+	  break
+	]
+
+] 
+  
+  
+返回 = 设置指标('正常', '数据', '描述')
+Trace(返回)
+{$I 调试开始.run}
+调用组件('参数1')
+{$I 调试结束.run}
